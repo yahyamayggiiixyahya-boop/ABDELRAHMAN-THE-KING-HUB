@@ -1,6 +1,6 @@
---[=[
-    ABDELRAHMAN THE KING HUB - SINGLE BOX & SCHEDULE v10.0
---]=]
+--[[,
+    ABDELRAHMAN THE KING HUB - MAINTENANCE SCHEDULE v11.0
+--]]
 
 local _ENV = (getgenv or function() return _ENV end)()
 local Players = game:GetService("Players")
@@ -9,34 +9,33 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
--- دالة فحص مواعيد الإغلاق والفتح الدقيقة للمفتاح المجاني
-local function checkScheduleTime()
+-- دالة فحص أوقات الصيانة الدقيقة
+local function checkMaintenanceTime()
     local dateTable = os.date("*t")
     local hour = dateTable.hour
     local min = dateTable.min
+    local totalMins = hour * 60 + min
 
-    -- تحويل الوقت الدقيق لدقائق للمقارنة السهلة
-    local currentTotalMinutes = hour * 60 + min
+    -- مواعيد الصيانة التي يتم فيها الطرد وإغلاق السكربت (8:30، 9:00، 9:30، 10:30)
+    local maintTimes = {
+        {8, 30},
+        {9, 0},
+        {9, 30},
+        {10, 30}
+    }
 
-    -- جدول الأوقات الممنوعة (يقفل فيها)
-    -- 1. من 7:30 صباحا
-    if currentTotalMinutes >= (7 * 60 + 30) and currentTotalMinutes < (8 * 60) then
-        return false, "⛔ السكربت مقفل بسبب وقت المدارس (الساعة 7:30 صباحاً)!"
-    end
-
-    -- 2. الساعات المحددة (8:30، 9:30، 10:30، 11:30) لمدة نصف ساعة لكل ساعة مثلا
-    local lockedHours = {8, 9, 10, 11}
-    for _, h in ipairs(lockedHours) do
-        if hour == h and min >= 30 then
-            return false, "⛔ السكربت مقفل في هذا الوقت المحدد (" .. h .. ":30)!"
+    for _, t in ipairs(maintTimes) do
+        local targetMins = t[1] * 60 + t[2]
+        -- لو الوقت الحالي ضمن نطاق 5 دقائق من موعد الصيانة المحدد
+        if math.abs(totalMins - targetMins) <= 5 then
+            return false, "السكربت دلوقتي في صيانة ومش هيشتغل غير بعد ساعة"
         end
     end
 
-    -- 3. مسموح يفتح بعد الساعة 1:00 صباحاً (01:00) وطوال اليوم الباقي ما عدا المواعيد فوق
     return true, ""
 end
 
--- واجهة نظام الإدخال (خانة واحدة فقط)
+-- واجهة نظام الإدخال (خانة واحدة)
 local KeyGui = Instance.new("ScreenGui")
 KeyGui.Name = "SecureKeySystem"
 KeyGui.ResetOnSpawn = false
@@ -60,13 +59,12 @@ KeyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 KeyTitle.TextSize, KeyTitle.Font = 12, Enum.Font.SourceSansBold
 KeyTitle.Parent = KeyFrame
 
--- خانة الكتابة الوحيدة
 local InputBox = Instance.new("TextBox")
 InputBox.Size = UDim2.new(0.85, 0, 0, 35)
 InputBox.Position = UDim2.new(0.075, 0, 0, 50)
 InputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderText = "اكتب هنا (VIP أو الكود العادي)..."
+InputBox.PlaceholderText = "اكتب هنا (VIP أو الكود)..."
 InputBox.Text = ""
 InputBox.TextSize, InputBox.Font = 11, Enum.Font.SourceSansBold
 InputBox.Parent = KeyFrame
@@ -82,20 +80,19 @@ SubmitBtn.TextSize, SubmitBtn.Font = 12, Enum.Font.SourceSansBold
 SubmitBtn.Parent = KeyFrame
 Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 6)
 
--- دالة تشغيل السكربت الأساسي
+-- دالة تشغيل السكربت الرئيسي
 local function BootHub(isVipMode)
-    if not isVipMode then
-        local allowed, reason = checkScheduleTime()
-        if not allowed then
-            KeyTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
-            KeyTitle.Text = reason
-            return
-        end
+    local isAllowed, maintMsg = checkMaintenanceTime()
+    if not isAllowed then
+        pcall(function()
+            LocalPlayer:Kick(maintMsg)
+        end)
+        return
     end
 
     KeyGui:Destroy()
 
-    -- حماية Anti-Kick الآمنة
+    -- حماية Anti-Kick الأساسية
     pcall(function()
         local mt = getrawmetatable(game)
         setreadonly(mt, false)
@@ -137,7 +134,7 @@ local function BootHub(isVipMode)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
     -- سحب القائمة بسلاسة
-    local dragging, dragInput, dragStart, startPos
+    local dragging, dragStart, startPos
     MainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true; dragStart = input.Position; startPos = MainFrame.Position
@@ -172,23 +169,36 @@ local function BootHub(isVipMode)
     if isVipMode then
         TimerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         task.spawn(function()
-            local timeLeft = 600 -- 10 دقائق فقط للـ VIP
+            local timeLeft = 600 -- 10 دقائق للـ VIP
             while timeLeft > 0 do
                 local mins = math.floor(timeLeft / 60)
                 local secs = timeLeft % 60
-                TimerLabel.String = string.format("⏳ VIP Time Left: %02d:%02d", mins, secs)
-                TimerLabel.Text = TimerLabel.String
+                TimerLabel.Text = string.format("⏳ VIP Time Left: %02d:%02d", mins, secs)
                 task.wait(1)
                 timeLeft = timeLeft - 1
             end
             pcall(function()
-                LocalPlayer:Kick("السكربت فيه مشاكل وهيشتغل بعد ساعة")
+                LocalPlayer:Kick("السكربت دلوقتي في صيانة ومش هيشتغل غير بعد ساعة")
             end)
         end)
     else
         TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
         TimerLabel.Text = "🟢 ONLINE - NORMAL MODE"
     end
+
+    -- فحص دوري في الخلفية لو دخل وقت الصيانة والسكربت شغال
+    task.spawn(function()
+        while true do
+            task.wait(30)
+            local ok, msg = checkMaintenanceTime()
+            if not ok then
+                pcall(function()
+                    LocalPlayer:Kick(msg)
+                end)
+                break
+            end
+        end
+    end)
 
     local ReportBtn = Instance.new("TextButton")
     ReportBtn.Size = UDim2.new(0.9, 0, 0, 28)
@@ -220,7 +230,6 @@ local function BootHub(isVipMode)
         end)
     end
 
-    -- زر الحفظ اليدوي (Save)
     local SaveBtn = Instance.new("TextButton")
     SaveBtn.Size = UDim2.new(0.9, 0, 0, 32)
     SaveBtn.Position = UDim2.new(0.05, 0, 0, 115)
@@ -231,7 +240,6 @@ local function BootHub(isVipMode)
     SaveBtn.Parent = MainFrame
     Instance.new("UICorner", SaveBtn).CornerRadius = UDim.new(0, 5)
 
-    -- زر الأوتو سيف الجديد (Auto Save Toggle)
     local autoSaveActive = false
     local AutoSaveBtn = Instance.new("TextButton")
     AutoSaveBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -254,7 +262,6 @@ local function BootHub(isVipMode)
         end
     end)
 
-    -- نظام الأوتو سيف يعمل في الخلفية تلقائياً كل 10 ثواني لو متفعل
     task.spawn(function()
         while true do
             task.wait(10)
@@ -314,7 +321,6 @@ local function BootHub(isVipMode)
     end)
 end
 
--- ملف فحص استخدام كود الـ VIP لمنع تكراره على نفس الجهاز
 local vipUsedFile = "Abdelrahman_VIP_Used.json"
 local function checkAndLockVIP()
     local success, result = pcall(function()
@@ -329,13 +335,23 @@ local function checkAndLockVIP()
     return success and result
 end
 
--- زر التحقق الوحيد لكل الأكواد
+-- زر التحقق الوحيد
 SubmitBtn.MouseButton1Click:Connect(function()
+    local ok, msg = checkMaintenanceTime()
+    if not ok then
+        KeyTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
+        KeyTitle.Text = msg
+        pcall(function()
+            LocalPlayer:Kick(msg)
+        end)
+        return
+    end
+
     local txt = InputBox.Text
     if txt == "VIP" then
         if checkAndLockVIP() then
             InputBox.Text = ""
-            InputBox.PlaceholderText = "❌ كود VIP تم استخدامه من قبل على هذا الجهاز!"
+            InputBox.PlaceholderText = "❌ كود VIP مستخدم مسبقاً على هذا الجهاز!"
         else
             BootHub(true)
         end
