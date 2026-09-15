@@ -1,5 +1,5 @@
 --[=[
-    ABDELRAHMAN THE KING HUB - VIP & SCHEDULE SYSTEM v8.0
+    ABDELRAHMAN THE KING HUB - SINGLE BOX & VIP HARDWARE LOCK v9.0
 --]=]
 
 local _ENV = (getgenv or function() return _ENV end)()
@@ -9,17 +9,16 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
--- فحص الأوقات الممنوعة وإعطاء رسالة الساعتين
+-- فحص الأوقات الممنوعة (تقفيل السكربت في الأوقات المحددة)
 local function checkScheduleTime()
     local hour = os.date("*t").hour
-    -- الأوقات: 7 لـ 8، 12 لـ 1، 19 (7 مساءً) لـ 21
     if (hour >= 7 and hour < 8) or (hour >= 12 and hour < 1) or (hour >= 19 and hour < 21) then
         return false
     end
     return true
 end
 
--- واجهة نظام المفتاح والـ VIP
+-- واجهة نظام الإدخال (خانة واحدة فقط)
 local KeyGui = Instance.new("ScreenGui")
 KeyGui.Name = "SecureKeySystem"
 KeyGui.ResetOnSpawn = false
@@ -27,8 +26,8 @@ pcall(function() KeyGui.Parent = CoreGui end)
 if not KeyGui.Parent then KeyGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local KeyFrame = Instance.new("Frame")
-KeyFrame.Size = UDim2.new(0, 280, 0, 200)
-KeyFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
+KeyFrame.Size = UDim2.new(0, 280, 0, 160)
+KeyFrame.Position = UDim2.new(0.5, -140, 0.5, -80)
 KeyFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 KeyFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
 KeyFrame.BorderSizePixel = 2
@@ -36,39 +35,28 @@ KeyFrame.Parent = KeyGui
 Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 10)
 
 local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, 0, 0, 35)
+KeyTitle.Size = UDim2.new(1, 0, 0, 40)
 KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "🔑 أدخل مفتاح التشغيل أو كود VIP"
+KeyTitle.Text = "🔑 أدخل المفتاح أو كود VIP هنا"
 KeyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-KeyTitle.TextSize, KeyTitle.Font = 11, Enum.Font.SourceSansBold
+KeyTitle.TextSize, KeyTitle.Font = 12, Enum.Font.SourceSansBold
 KeyTitle.Parent = KeyFrame
 
-local KeyBox = Instance.new("TextBox")
-KeyBox.Size = UDim2.new(0.85, 0, 0, 32)
-KeyBox.Position = UDim2.new(0.075, 0, 0, 40)
-KeyBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyBox.PlaceholderText = "اكتب المفتاح هنا..."
-KeyBox.Text = ""
-KeyBox.TextSize, KeyBox.Font = 11, Enum.Font.SourceSansBold
-KeyBox.Parent = KeyFrame
-Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 6)
-
--- خانة كود الأدمن VIP
-local VipBox = Instance.new("TextBox")
-VipBox.Size = UDim2.new(0.85, 0, 0, 32)
-VipBox.Position = UDim2.new(0.075, 0, 0, 80)
-VipBox.BackgroundColor3 = Color3.fromRGB(35, 25, 10)
-VipBox.TextColor3 = Color3.fromRGB(255, 215, 0)
-VipBox.PlaceholderText = "اكتب كود VIP هنا (لـ 10 دقائق)..."
-VipBox.Text = ""
-VipBox.TextSize, VipBox.Font = 11, Enum.Font.SourceSansBold
-VipBox.Parent = KeyFrame
-Instance.new("UICorner", VipBox).CornerRadius = UDim.new(0, 6)
+-- خانة كتابة واحدة مشتركة لكل حاجة
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(0.85, 0, 0, 35)
+InputBox.Position = UDim2.new(0.075, 0, 0, 50)
+InputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+InputBox.PlaceholderText = "اكتب الكود أو VIP هنا..."
+InputBox.Text = ""
+InputBox.TextSize, InputBox.Font = 11, Enum.Font.SourceSansBold
+InputBox.Parent = KeyFrame
+Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 6)
 
 local SubmitBtn = Instance.new("TextButton")
 SubmitBtn.Size = UDim2.new(0.85, 0, 0, 35)
-SubmitBtn.Position = UDim2.new(0.075, 0, 0, 125)
+SubmitBtn.Position = UDim2.new(0.075, 0, 0, 100)
 SubmitBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 SubmitBtn.Text = "🔓 تفعيل السكربت"
 SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -76,17 +64,17 @@ SubmitBtn.TextSize, SubmitBtn.Font = 12, Enum.Font.SourceSansBold
 SubmitBtn.Parent = KeyFrame
 Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 6)
 
--- دالة تشغيل السكربت مع مؤقت الـ 10 دقائق لو تم الدخول بـ VIP
+-- دالة تشغيل السكربت الأساسي
 local function BootHub(isVipMode)
     if not checkScheduleTime() then
         KeyTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
-        KeyTitle.Text = "⛔ السكربت حاليا واقف وهيشتغل بعد ساعتين!"
+        KeyTitle.Text = "⛔ السكربت حاليا واقف ومش هينفع يشتغل غير بعد ساعتين!"
         return
     end
 
     KeyGui:Destroy()
 
-    -- حماية Anti-Kick الأصلية
+    -- حماية Anti-Kick الآمنة
     pcall(function()
         local mt = getrawmetatable(game)
         setreadonly(mt, false)
@@ -127,7 +115,7 @@ local function BootHub(isVipMode)
     MainFrame.Parent = ScreenGui
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-    -- سحب القائمة
+    -- سحب القائمة بسلاسة
     local dragging, dragInput, dragStart, startPos
     MainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -153,18 +141,17 @@ local function BootHub(isVipMode)
     Title.TextSize, Title.Font = 10, Enum.Font.SourceSansBold
     Title.Parent = MainFrame
 
-    -- عداد الوقت لو دخل بوضع الـ VIP (10 دقائق فقط)
     local TimerLabel = Instance.new("TextLabel")
     TimerLabel.Size = UDim2.new(1, 0, 0, 22)
     TimerLabel.Position = UDim2.new(0, 0, 0, 25)
     TimerLabel.BackgroundTransparency = 1
-    TimerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     TimerLabel.TextSize, TimerLabel.Font = 10, Enum.Font.SourceSansBold
     TimerLabel.Parent = MainFrame
 
     if isVipMode then
+        TimerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         task.spawn(function()
-            local timeLeft = 600 -- 10 دقائق (600 ثانية)
+            local timeLeft = 600 -- 10 دقائق فقط للـ VIP
             while timeLeft > 0 do
                 local mins = math.floor(timeLeft / 60)
                 local secs = timeLeft % 60
@@ -172,7 +159,7 @@ local function BootHub(isVipMode)
                 task.wait(1)
                 timeLeft = timeLeft - 1
             end
-            -- طرد اللاعب بعد انتهاء الـ 10 دقائق بالرسالة المطلوبة
+            -- طرد الجهاز بعد انتهاء الـ 10 دقائق بالرسالة المطلوبة تماماً
             pcall(function()
                 LocalPlayer:Kick("السكربت فيه مشاكل وهيشتغل بعد ساعة")
             end)
@@ -269,15 +256,35 @@ local function BootHub(isVipMode)
     end)
 end
 
--- زر التحقق والفحص
+-- ملف تخزين فحص استخدام كود الـ VIP على الجهاز/الشبكة لمنع تكراره
+local vipUsedFile = "Abdelrahman_VIP_Used.json"
+local function checkAndLockVIP()
+    local success, result = pcall(function()
+        if isfile and isfile(vipUsedFile) then
+            return true -- تم استخدامه من قبل على هذا الجهاز/الشبكة
+        end
+        if writefile then
+            writefile(vipUsedFile, "USED_DEVICE_LOCK")
+        end
+        return false
+    end)
+    return success and result
+end
+
+-- زر التحقق في الخانة الواحدة المشتركة
 SubmitBtn.MouseButton1Click:Connect(function()
-    if VipBox.Text == "VIP" then
-        BootHub(true) -- تفعيل بوضع الـ VIP لمدة 10 دقائق
-    elseif KeyBox.Text == "FREE_6272727" then
-        BootHub(false) -- تفعيل عادي
+    local txt = InputBox.Text
+    if txt == "VIP" then
+        if checkAndLockVIP() then
+            InputBox.Text = ""
+            InputBox.PlaceholderText = "❌ كود VIP تم استخدامه مسبقاً على هذا الجهاز!"
+        else
+            BootHub(true) -- تشغيل وضع الـ VIP لمدة 10 دقائق
+        end
+    elseif txt == "FREE_6272727" then
+        BootHub(false) -- تشغيل عادي مفتوح
     else
-        KeyBox.Text = ""
-        VipBox.Text = ""
-        KeyBox.PlaceholderText = "❌ المفتاح أو كود VIP خطأ!"
+        InputBox.Text = ""
+        InputBox.PlaceholderText = "❌ الكود خطأ، حاول مجدداً!"
     end
 end)
