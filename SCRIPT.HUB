@@ -1,5 +1,5 @@
 --[[,
-    ABDELRAHMAN THE KING HUB - FINAL STABLE v12.0
+    ABDELRAHMAN THE KING HUB - LIVE CLOCK & EXACT SCHEDULE v13.0
 --]]
 
 local _ENV = (getgenv or function() return _ENV end)()
@@ -9,31 +9,33 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
--- دالة فحص أوقات الصيانة بدقة
+-- دالة فحص أوقات الصيانة بالدقيقة والساعة بناءً على وقت جهاز اللاعب
 local function checkMaintenanceTime()
     local dateTable = os.date("*t")
-    local hour = dateTable.hour
-    local min = dateTable.min
+    local hour = dateTable.hour       -- 0 إلى 23 (نظام 24 ساعة)
+    local min = dateTable.min         -- الدقائق
     local totalMins = hour * 60 + min
 
-    local maintTimes = {
-        {8, 30},
-        {9, 0},
-        {9, 30},
-        {10, 30}
-    }
+    -- 1. فترة الصيانة الصباحية: من 7:00 صباحاً حتى 1:00 ظهراً (13:00)
+    if hour >= 7 and hour < 13 then
+        return false, "السكربت دلوقتي في صيانة ومش هيشتغل غير بعد ساعة"
+    end
 
-    for _, t in ipairs(maintTimes) do
-        local targetMins = t[1] * 60 + t[2]
-        if math.abs(totalMins - targetMins) <= 5 then
-            return false, "السكربت دلوقتي في صيانة ومش هيشتغل غير بعد ساعة"
-        end
+    -- 2. الأوقات المحددة بالليل (8:58، 8:59، 10:50)
+    -- 8:58 مساءً = 20:58 (20 * 60 + 58 = 1258)
+    if (hour == 20 and min == 58) or (hour == 20 and min == 59) then
+        return false, "السكربت دلوقتي في صيانة ومش هيشتغل غير بعد ساعة"
+    end
+
+    -- 10:50 مساءً = 22:50 (22 * 60 + 50 = 1370)
+    if hour == 22 and min == 50 then
+        return false, "السكربت دلوقتي في صيانة ومش هيشتغل غير بعد ساعة"
     end
 
     return true, ""
 end
 
--- واجهة نظام الإدخال
+-- واجهة نظام الإدخال (خانة واحدة)
 local KeyGui = Instance.new("ScreenGui")
 KeyGui.Name = "SecureKeySystem"
 KeyGui.ResetOnSpawn = false
@@ -90,7 +92,7 @@ local function BootHub(isVipMode)
 
     KeyGui:Destroy()
 
-    -- تفعيل حماية Anti-Kick تلقائياً في الخلفية
+    -- حماية Anti-Kick في الخلفية
     pcall(function()
         local mt = getrawmetatable(game)
         setreadonly(mt, false)
@@ -112,6 +114,34 @@ local function BootHub(isVipMode)
     pcall(function() ScreenGui.Parent = CoreGui end)
     if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
+    -- شريط عرض الساعة المباشرة فوق في الجنب على الشاشة
+    local LiveClockLabel = Instance.new("TextLabel")
+    LiveClockLabel.Size = UDim2.new(0, 140, 0, 30)
+    LiveClockLabel.Position = UDim2.new(1, -150, 0, 10)
+    LiveClockLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    LiveClockLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    LiveClockLabel.TextSize, LiveClockLabel.Font = 11, Enum.Font.SourceSansBold
+    LiveClockLabel.Parent = ScreenGui
+    Instance.new("UICorner", LiveClockLabel).CornerRadius = UDim.new(0, 6)
+
+    -- تحديث الساعة كل ثانية بشكل حي بناءً على جهاز اللاعب
+    task.spawn(function()
+        while true do
+            local t = os.date("*t")
+            local hour = t.hour
+            local min = t.min
+            local sec = t.sec
+            local ampm = "AM"
+            if hour >= 12 then
+                ampm = "PM"
+                if hour > 12 then hour = hour - 12 end
+            end
+            if hour == 0 then hour = 12 end
+            LiveClockLabel.Text = string.format("🕒 %02d:%02d:%02d %s", hour, min, sec, ampm)
+            task.wait(1)
+        end
+    end)
+
     local ToggleViewBtn = Instance.new("TextButton")
     ToggleViewBtn.Size = UDim2.new(0, 35, 0, 35)
     ToggleViewBtn.Position = UDim2.new(0, 10, 0.2, 0)
@@ -131,8 +161,8 @@ local function BootHub(isVipMode)
     MainFrame.Parent = ScreenGui
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-    -- نظام سحب القائمة المنظم والثابت
-    local dragging, dragInput, dragStart, startPos
+    -- حركة السحب المنظمة والثابتة للقائمة
+    local dragging, dragStart, startPos
     MainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -192,10 +222,10 @@ local function BootHub(isVipMode)
         TimerLabel.Text = "🟢 ONLINE - SCHEDULE ACTIVE"
     end
 
-    -- المراقبة الذاتية في الخلفية لإعطاء الكيك لو دخل وقت الصيانة واللاعب بيلعب
+    -- فحص صيانة دوري في الخلفية (كل 5 ثواني عشان يقفله فوراً وقت الدقيقة المطلوبة)
     task.spawn(function()
         while true do
-            task.wait(10)
+            task.wait(5)
             local ok, msg = checkMaintenanceTime()
             if not ok then
                 pcall(function()
@@ -246,7 +276,7 @@ local function BootHub(isVipMode)
     SaveBtn.Parent = MainFrame
     Instance.new("UICorner", SaveBtn).CornerRadius = UDim.new(0, 5)
 
-    -- الأوتو سيف شغال في الخلفية تلقائياً من نفسه
+    -- الأوتو سيف شغال لوحده في الخلفية كل 10 ثواني
     task.spawn(function()
         while true do
             task.wait(10)
