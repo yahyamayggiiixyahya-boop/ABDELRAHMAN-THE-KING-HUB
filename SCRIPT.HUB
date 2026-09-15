@@ -1,6 +1,5 @@
 --[=[
-    ABDELRAHMAN THE KING HUB - ULTIMATE SECURE v7.0
-    Features: Advanced Anti-Kick, Delta Auto-File Save, 24/7 Online Status & Strict Schedule Lock.
+    ABDELRAHMAN THE KING HUB - VIP & SCHEDULE SYSTEM v8.0
 --]=]
 
 local _ENV = (getgenv or function() return _ENV end)()
@@ -10,18 +9,17 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
--- التحقق من الأوقات المحظورة (تقفيل السكربت أوتوماتيك في الأوقات المحددة)
+-- فحص الأوقات الممنوعة وإعطاء رسالة الساعتين
 local function checkScheduleTime()
-    local dateTable = os.date("*t")
-    local hour = dateTable.hour
-    -- الأوقات المطلوبة للإغلاق: من 7 لـ 8، ومن 12 لـ 1، ومن 7 لـ 9 (مساءً أو صباحاً حسب التوقيت المحلي)
-    if (hour >= 7 and hour < 8) or (hour >= 12 and hour < 1) or (hour >= 19 and hour < 21) or (hour >= 7 and hour < 9 and dateTable.isdst) then
-        return false -- مغلق في هذه الأوقات
+    local hour = os.date("*t").hour
+    -- الأوقات: 7 لـ 8، 12 لـ 1، 19 (7 مساءً) لـ 21
+    if (hour >= 7 and hour < 8) or (hour >= 12 and hour < 1) or (hour >= 19 and hour < 21) then
+        return false
     end
-    return true -- مسموح بالعمل
+    return true
 end
 
--- واجهة نظام المفتاح
+-- واجهة نظام المفتاح والـ VIP
 local KeyGui = Instance.new("ScreenGui")
 KeyGui.Name = "SecureKeySystem"
 KeyGui.ResetOnSpawn = false
@@ -29,8 +27,8 @@ pcall(function() KeyGui.Parent = CoreGui end)
 if not KeyGui.Parent then KeyGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local KeyFrame = Instance.new("Frame")
-KeyFrame.Size = UDim2.new(0, 280, 0, 160)
-KeyFrame.Position = UDim2.new(0.5, -140, 0.5, -80)
+KeyFrame.Size = UDim2.new(0, 280, 0, 200)
+KeyFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
 KeyFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 KeyFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
 KeyFrame.BorderSizePixel = 2
@@ -38,52 +36,63 @@ KeyFrame.Parent = KeyGui
 Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 10)
 
 local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, 0, 0, 40)
+KeyTitle.Size = UDim2.new(1, 0, 0, 35)
 KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "🔑 أدخل مفتاح التشغيل يا ملك"
+KeyTitle.Text = "🔑 أدخل مفتاح التشغيل أو كود VIP"
 KeyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-KeyTitle.TextSize, KeyTitle.Font = 12, Enum.Font.SourceSansBold
+KeyTitle.TextSize, KeyTitle.Font = 11, Enum.Font.SourceSansBold
 KeyTitle.Parent = KeyFrame
 
 local KeyBox = Instance.new("TextBox")
-KeyBox.Size = UDim2.new(0.85, 0, 0, 35)
-KeyBox.Position = UDim2.new(0.075, 0, 0, 50)
+KeyBox.Size = UDim2.new(0.85, 0, 0, 32)
+KeyBox.Position = UDim2.new(0.075, 0, 0, 40)
 KeyBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyBox.PlaceholderText = "اكتب الكود هنا..."
+KeyBox.PlaceholderText = "اكتب المفتاح هنا..."
 KeyBox.Text = ""
 KeyBox.TextSize, KeyBox.Font = 11, Enum.Font.SourceSansBold
 KeyBox.Parent = KeyFrame
 Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 6)
 
+-- خانة كود الأدمن VIP
+local VipBox = Instance.new("TextBox")
+VipBox.Size = UDim2.new(0.85, 0, 0, 32)
+VipBox.Position = UDim2.new(0.075, 0, 0, 80)
+VipBox.BackgroundColor3 = Color3.fromRGB(35, 25, 10)
+VipBox.TextColor3 = Color3.fromRGB(255, 215, 0)
+VipBox.PlaceholderText = "اكتب كود VIP هنا (لـ 10 دقائق)..."
+VipBox.Text = ""
+VipBox.TextSize, VipBox.Font = 11, Enum.Font.SourceSansBold
+VipBox.Parent = KeyFrame
+Instance.new("UICorner", VipBox).CornerRadius = UDim.new(0, 6)
+
 local SubmitBtn = Instance.new("TextButton")
 SubmitBtn.Size = UDim2.new(0.85, 0, 0, 35)
-SubmitBtn.Position = UDim2.new(0.075, 0, 0, 100)
+SubmitBtn.Position = UDim2.new(0.075, 0, 0, 125)
 SubmitBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-SubmitBtn.Text = "🔓 التحقق والتفعيل"
+SubmitBtn.Text = "🔓 تفعيل السكربت"
 SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SubmitBtn.TextSize, SubmitBtn.Font = 12, Enum.Font.SourceSansBold
 SubmitBtn.Parent = KeyFrame
 Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 6)
 
--- الدالة الأساسية بعد التحقق من المفتاح والوقت
-local function BootHub()
+-- دالة تشغيل السكربت مع مؤقت الـ 10 دقائق لو تم الدخول بـ VIP
+local function BootHub(isVipMode)
     if not checkScheduleTime() then
-        KeyTitle.Text = "⛔ السكربت مغلق حالياً في هذا الوقت!"
+        KeyTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
+        KeyTitle.Text = "⛔ السكربت حاليا واقف وهيشتغل بعد ساعتين!"
         return
     end
 
     KeyGui:Destroy()
 
-    -- نظام Anti-Kick الجديد كلياً والآمن في الخلفية
+    -- حماية Anti-Kick الأصلية
     pcall(function()
         local mt = getrawmetatable(game)
         setreadonly(mt, false)
         local old = mt.__namecall
         mt.__namecall = newcclosure(function(self, ...)
-            if getnamecallmethod() == "Kick" and self == LocalPlayer then
-                return -- حماية تامة من الطرد دون أي تأثير سلبي
-            end
+            if getnamecallmethod() == "Kick" and self == LocalPlayer then return end
             return old(self, ...)
         end)
     end)
@@ -110,7 +119,7 @@ local function BootHub()
     Instance.new("UICorner", ToggleViewBtn).CornerRadius = UDim.new(0, 6)
 
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 260, 0, 340)
+    MainFrame.Size = UDim2.new(0, 260, 0, 350)
     MainFrame.Position = UDim2.new(0, 55, 0.2, 0)
     MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     MainFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
@@ -118,7 +127,7 @@ local function BootHub()
     MainFrame.Parent = ScreenGui
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-    -- سحب القائمة بسلاسة فائقة
+    -- سحب القائمة
     local dragging, dragInput, dragStart, startPos
     MainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -144,20 +153,38 @@ local function BootHub()
     Title.TextSize, Title.Font = 10, Enum.Font.SourceSansBold
     Title.Parent = MainFrame
 
-    -- مؤشر الحالة Online 24/7
-    local OnlineLabel = Instance.new("TextLabel")
-    OnlineLabel.Size = UDim2.new(1, 0, 0, 20)
-    OnlineLabel.Position = UDim2.new(0, 0, 0, 25)
-    OnlineLabel.BackgroundTransparency = 1
-    OnlineLabel.Text = "🟢 ONLINE 24/7 - SECURE"
-    OnlineLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-    OnlineLabel.TextSize, OnlineLabel.Font = 9, Enum.Font.SourceSansBold
-    OnlineLabel.Parent = MainFrame
+    -- عداد الوقت لو دخل بوضع الـ VIP (10 دقائق فقط)
+    local TimerLabel = Instance.new("TextLabel")
+    TimerLabel.Size = UDim2.new(1, 0, 0, 22)
+    TimerLabel.Position = UDim2.new(0, 0, 0, 25)
+    TimerLabel.BackgroundTransparency = 1
+    TimerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    TimerLabel.TextSize, TimerLabel.Font = 10, Enum.Font.SourceSansBold
+    TimerLabel.Parent = MainFrame
 
-    -- زر الشكاوى والبلاغات
+    if isVipMode then
+        task.spawn(function()
+            local timeLeft = 600 -- 10 دقائق (600 ثانية)
+            while timeLeft > 0 do
+                local mins = math.floor(timeLeft / 60)
+                local secs = timeLeft % 60
+                TimerLabel.Text = string.format("⏳ VIP Time Left: %02d:%02d", mins, secs)
+                task.wait(1)
+                timeLeft = timeLeft - 1
+            end
+            -- طرد اللاعب بعد انتهاء الـ 10 دقائق بالرسالة المطلوبة
+            pcall(function()
+                LocalPlayer:Kick("السكربت فيه مشاكل وهيشتغل بعد ساعة")
+            end)
+        end)
+    else
+        TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+        TimerLabel.Text = "🟢 ONLINE 24/7 - NORMAL"
+    end
+
     local ReportBtn = Instance.new("TextButton")
     ReportBtn.Size = UDim2.new(0.9, 0, 0, 28)
-    ReportBtn.Position = UDim2.new(0.05, 0, 0, 50)
+    ReportBtn.Position = UDim2.new(0.05, 0, 0, 52)
     ReportBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     ReportBtn.Text = "📩 إرسال شكوى / بلاغ"
     ReportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -167,7 +194,7 @@ local function BootHub()
 
     local StatusLabel = Instance.new("TextLabel")
     StatusLabel.Size = UDim2.new(0.9, 0, 0, 22)
-    StatusLabel.Position = UDim2.new(0.05, 0, 0, 84)
+    StatusLabel.Position = UDim2.new(0.05, 0, 0, 85)
     StatusLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     StatusLabel.Text = "Status: Delta File Ready"
@@ -175,7 +202,6 @@ local function BootHub()
     StatusLabel.Parent = MainFrame
     Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 5)
 
-    -- نظام حفظ الملفات داخل مجلد Delta في التليفون
     local fileName = "Abdelrahman_DeltaSave.json"
     local function saveLocationToFile(cf)
         pcall(function()
@@ -190,7 +216,7 @@ local function BootHub()
     SaveBtn.Size = UDim2.new(0.9, 0, 0, 35)
     SaveBtn.Position = UDim2.new(0.05, 0, 0, 115)
     SaveBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    SaveBtn.Text = "💾 Save to Delta Folder (حفظ تلقائي)"
+    SaveBtn.Text = "💾 Save to Delta Folder"
     SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SaveBtn.TextSize, SaveBtn.Font = 11, Enum.Font.SourceSansBold
     SaveBtn.Parent = MainFrame
@@ -200,7 +226,7 @@ local function BootHub()
     TpBtn.Size = UDim2.new(0.9, 0, 0, 35)
     TpBtn.Position = UDim2.new(0.05, 0, 0, 158)
     TpBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
-    TpBtn.Text = "🚀 Teleport (الانتقال للمحفوظ)"
+    TpBtn.Text = "🚀 Teleport"
     TpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TpBtn.TextSize, TpBtn.Font = 11, Enum.Font.SourceSansBold
     TpBtn.Parent = MainFrame
@@ -211,7 +237,7 @@ local function BootHub()
     AntiKickStatus.Position = UDim2.new(0.05, 0, 0, 200)
     AntiKickStatus.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     AntiKickStatus.TextColor3 = Color3.fromRGB(0, 255, 128)
-    AntiKickStatus.Text = "🛡️ New Anti-Kick: 100% Protected"
+    AntiKickStatus.Text = "🛡️ Anti-Kick: Protected & Active"
     AntiKickStatus.TextSize, AntiKickStatus.Font = 10, Enum.Font.SourceSansBold
     AntiKickStatus.Parent = MainFrame
     Instance.new("UICorner", AntiKickStatus).CornerRadius = UDim.new(0, 5)
@@ -223,7 +249,7 @@ local function BootHub()
             savedCF = root.CFrame
             saveLocationToFile(savedCF)
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-            StatusLabel.Text = "Status: Saved in Delta Folder! ✅"
+            StatusLabel.Text = "Status: Saved in Delta! ✅"
         end
     end)
 
@@ -237,18 +263,21 @@ local function BootHub()
     end)
 
     ReportBtn.MouseButton1Click:Connect(function()
-        ReportBtn.Text = "✅ تم إرسال الشكوى بنجاح!"
+        ReportBtn.Text = "✅ تم إرسال البلاغ بنجاح!"
         task.wait(2)
         ReportBtn.Text = "📩 إرسال شكوى / بلاغ"
     end)
 end
 
--- التحقق من المفتاح السري
+-- زر التحقق والفحص
 SubmitBtn.MouseButton1Click:Connect(function()
-    if KeyBox.Text == "FREE_6272727" then
-        BootHub()
+    if VipBox.Text == "VIP" then
+        BootHub(true) -- تفعيل بوضع الـ VIP لمدة 10 دقائق
+    elseif KeyBox.Text == "FREE_6272727" then
+        BootHub(false) -- تفعيل عادي
     else
         KeyBox.Text = ""
-        KeyBox.PlaceholderText = "❌ المفتاح غير صحيح!"
+        VipBox.Text = ""
+        KeyBox.PlaceholderText = "❌ المفتاح أو كود VIP خطأ!"
     end
 end)
